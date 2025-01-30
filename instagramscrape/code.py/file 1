@@ -1,0 +1,82 @@
+import instaloader
+
+def scrape_instagram_username(username):
+    """
+    Scrapes public Instagram data for a given username.
+
+    Args:
+        username: The Instagram username to scrape.
+
+    Returns:
+        A dictionary containing the scraped data, or None if an error occurs.
+        The dictionary may include keys like 'profile_pic_url', 'followers_count',
+        'following_count', 'bio', 'posts', etc.  The 'posts' value would be
+        a list of post dictionaries, each with information about that post.
+        Returns None if the profile is private or doesn't exist.
+    """
+
+    try:
+        L = instaloader.Instaloader()
+
+        # Load the profile
+        profile = instaloader.Profile.from_username(L.context, username)
+
+        # Scrape profile information
+        profile_data = {
+            "username": profile.username,
+            "full_name": profile.full_name,
+            "profile_pic_url": profile.profile_pic,
+            "followers_count": profile.followers,
+            "following_count": profile.followees,
+            "bio": profile.biography,
+            "is_private": profile.is_private,  # Important check!
+            "posts": [],  # We'll populate this later
+        }
+
+        if profile.is_private:
+            print(f"Profile {username} is private. Cannot scrape.")
+            return None
+
+
+        # Scrape posts (only if the account is public)
+        for post in profile.get_posts():
+            post_data = {
+                "shortcode": post.shortcode,
+                "display_url": post.url,
+                "caption": post.caption,
+                "date": post.date_utc,  # UTC time
+                "likes": post.likes,
+                "comments": post.comments,
+                "is_video": post.is_video,
+                # ... other post data as needed ...
+            }
+            profile_data["posts"].append(post_data)
+
+        return profile_data
+
+    except instaloader.ProfileNotExistsException:
+        print(f"Profile {username} not found.")
+        return None
+    except Exception as e:  # Catch other potential errors
+        print(f"An error occurred: {e}")
+        return None
+
+
+
+# Example usage:
+username_to_scrape = "some_instagram_username"  # Replace with the actual username
+scraped_data = scrape_instagram_username(username_to_scrape)
+
+if scraped_data:
+    print(f"Scraped data for {username_to_scrape}:")
+    # You can now process the scraped_data dictionary
+    import json  # For nicely printing the dictionary (optional)
+    print(json.dumps(scraped_data, indent=4, default=str)) # default=str handles dates
+
+    # Example: Print the number of followers and the first post caption
+    print(f"Followers: {scraped_data['followers_count']}")
+    if scraped_data['posts']:  # Check if there are any posts
+       print(f"First post caption: {scraped_data['posts'][0]['caption']}")
+
+else:
+    print("Scraping failed.")
